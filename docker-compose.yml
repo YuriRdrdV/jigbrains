@@ -1,0 +1,63 @@
+
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+    container_name: jigbrains-app
+    working_dir: /var/www
+    volumes:
+      - .:/var/www
+    depends_on:
+      - mysql
+    networks:
+      - jigbrains
+    ports:
+      - "9000:9000" # PHP-FPM
+
+  node:
+    image: node:20
+    container_name: jigbrains-node
+    working_dir: /var/www
+    volumes:
+      - .:/var/www
+    networks:
+      - jigbrains
+    command: ["tail", "-f", "/dev/null"] # Fica rodando para você entrar e rodar npm
+
+  webserver:
+    image: nginx:alpine
+    container_name: jigbrains-nginx
+    ports:
+      - "80:80"
+    volumes:
+      - .:/var/www
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - app
+    networks:
+      - jigbrains
+
+  mysql:
+    image: mysql:8.0
+    container_name: jigbrains-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: jigbrains
+      MYSQL_USER: user
+      MYSQL_PASSWORD: secret
+    volumes:
+      - mysql_data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+    networks:
+      - jigbrains
+
+networks:
+  jigbrains:
+
+volumes:
+  mysql_data:
